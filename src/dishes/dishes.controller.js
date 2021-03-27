@@ -10,7 +10,7 @@ const nextId = require("../utils/nextId");
 // strictly middleware
 function dishExists(req, res, next) {
   const { dishId } = req.params;
-  const foundDish = dishes.find((dish) => dish.id === Number(dishId));
+  const foundDish = dishes.find((dish) => dish.id === dishId);
   if (foundDish) {
     res.locals.dish = foundDish;
     return next();
@@ -21,10 +21,45 @@ function dishExists(req, res, next) {
   });
 }
 
+function dishIsValid(req, res, next) {
+  const { data: { dishData } = {} } = req.body;
+  if (!dishData.name || dishData.name.length == 0) {
+    return next({
+      status: 400,
+      message: "Dish must include a name",
+    });
+  }
+  if (!dishData.description || dishData.description.length == 0) {
+    return next({
+      status: 400,
+      message: "Dish must include a description",
+    });
+  }
+  if (!dishData.price) {
+    return next({
+      status: 400,
+      message: "Dish must include a price",
+    });
+  }
+  if (!Number.isInteger(dishData.price) || dishData.price <= 0) {
+    return next({
+      status: 400,
+      message: "Dish must have a price that is an integer greater than 0",
+    });
+  }
+  if (!dishData.image_url || dishData.image_url.length == 0) {
+    return next({
+      status: 400,
+      message: "Dish must include a image_url",
+    });
+  }
+  next();
+}
+
 function dishIdMatches(req, res, next) {
   const { dishId } = req.params;
   const { data: { newDish } = {} } = req.body;
-  if (newDish.id && newDish.id !== dishId) {
+  if (newDish && newDish.id !== dishId) {
     return next({
       status: 400,
       message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
@@ -51,7 +86,7 @@ function read(req, res) {
 }
 
 function update(req, res, next) {
-  const dish = res.locals.dish;
+  let dish = res.locals.dish;
   const { data: { newDish } = {} } = req.body;
   dish = newDish;
   res.json({ data: dish });
@@ -62,8 +97,8 @@ function list(req, res) {
 }
 
 module.exports = {
-  create,
+  create: [dishIsValid, create],
   read: [dishExists, read],
-  update: [dishIdMatches, update],
+  update: [dishExists, dishIdMatches, update],
   list,
 };
