@@ -87,15 +87,14 @@ function read(req, res) {
 }
 
 function update(req, res, next) {
-  let dish = res.locals.dish;
+  const { data: dish = {} } = req.body;
   const { dishId } = req.params;
-  const { data: newDish = {} } = req.body;
 
-  dish =
-    newDish.id && newDish.id.length > 0 && typeof newDish.id == "string"
-      ? newDish
-      : { id: dishId, ...newDish };
+  if (!dish.id || dish.id.length === 0 || typeof dish.id !== "string") {
+    dish.id = dishId;
+  }
 
+  res.locals.dish = dish;
   res.json({ data: dish });
 }
 

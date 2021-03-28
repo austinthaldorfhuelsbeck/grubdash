@@ -86,7 +86,7 @@ function statusIsValid(req, res, next) {
 }
 
 function statusIsPending(req, res, next) {
-  const { data: order = {} } = req.body;
+  const order = res.locals.order;
   if (order.status !== "pending") {
     return next({
       status: 400,
@@ -126,12 +126,14 @@ function read(req, res) {
 }
 
 function update(req, res, next) {
-  let order = res.locals.order;
+  const { data: order = {} } = req.body;
   const { orderId } = req.params;
-  const { data: newOrder = {} } = req.body;
 
-  order = newOrder.id ? newOrder : { id: orderId, ...newOrder };
+  if (!order.id || order.id.length === 0 || typeof order.id !== "string") {
+    order.id = orderId;
+  }
 
+  res.locals.order = order;
   res.json({ data: order });
 }
 
@@ -150,6 +152,6 @@ module.exports = {
   create: [orderIsValid, create],
   read: [orderExists, read],
   update: [orderExists, orderIsValid, statusIsValid, orderIdMatches, update],
-  delete: [statusIsPending, orderExists, destroy],
+  delete: [orderExists, statusIsPending, destroy],
   list,
 };
