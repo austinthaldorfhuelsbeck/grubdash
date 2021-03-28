@@ -22,58 +22,59 @@ function dishExists(req, res, next) {
 }
 
 function dishIsValid(req, res, next) {
-  const { data: { dishData } = {} } = req.body;
-  if (!dishData.name || dishData.name.length == 0) {
+  const { data: dish = {} } = req.body;
+  if (!dish.name || dish.name.length == 0) {
     return next({
       status: 400,
       message: "Dish must include a name",
     });
   }
-  if (!dishData.description || dishData.description.length == 0) {
+  if (!dish.description || dish.description.length == 0) {
     return next({
       status: 400,
       message: "Dish must include a description",
     });
   }
-  if (!dishData.price) {
+  if (!dish.price) {
     return next({
       status: 400,
       message: "Dish must include a price",
     });
   }
-  if (!Number.isInteger(dishData.price) || dishData.price <= 0) {
+  if (!Number.isInteger(dish.price) || dish.price <= 0) {
     return next({
       status: 400,
       message: "Dish must have a price that is an integer greater than 0",
     });
   }
-  if (!dishData.image_url || dishData.image_url.length == 0) {
+  if (!dish.image_url || dish.image_url.length == 0) {
     return next({
       status: 400,
       message: "Dish must include a image_url",
     });
   }
+  res.locals.dish = dish;
   next();
 }
 
 function dishIdMatches(req, res, next) {
   const { dishId } = req.params;
-  const { data: { newDish } = {} } = req.body;
-  if (newDish && newDish.id !== dishId) {
+  const { data: dish = {} } = req.body;
+  if (dish.id && dish.id !== dishId) {
     return next({
       status: 400,
-      message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
+      message: `Dish id does not match route id. Dish: ${dish.id}, Route: ${dishId}`,
     });
   }
   next();
 }
 
 // CRUDL
-function create(req, res, next) {
-  const { data: { dishData } = {} } = req.body;
+function create(req, res) {
+  const { data: dish = {} } = req.body;
   const newDish = {
-    id: nextId,
-    dishData,
+    id: nextId(),
+    ...dish,
   };
   dishes.push(newDish);
   res.status(201).json({ data: newDish });
@@ -87,8 +88,14 @@ function read(req, res) {
 
 function update(req, res, next) {
   let dish = res.locals.dish;
-  const { data: { newDish } = {} } = req.body;
-  dish = newDish;
+  const { dishId } = req.params;
+  const { data: newDish = {} } = req.body;
+
+  dish =
+    newDish.id && newDish.id.length > 0 && typeof newDish.id == "string"
+      ? newDish
+      : { id: dishId, ...newDish };
+
   res.json({ data: dish });
 }
 
@@ -99,6 +106,6 @@ function list(req, res) {
 module.exports = {
   create: [dishIsValid, create],
   read: [dishExists, read],
-  update: [dishExists, dishIdMatches, update],
+  update: [dishExists, dishIsValid, dishIdMatches, update],
   list,
 };
